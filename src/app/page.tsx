@@ -1,7 +1,8 @@
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
-import { User, DocumentRecord, AuditLogEntry } from '@/types/vault';
+import { DocumentRecord, AuditLogEntry } from '@/types/vault';
 
 interface SeedUserSummary {
   id: string;
@@ -26,6 +27,11 @@ export default function TrustVaultDashboard() {
   const [attackResult, setAttackResult] = useState<{ status: number; message: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  const [newTitle, setNewTitle] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [newClassification, setNewClassification] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal');
+  const [createMsg, setCreateMsg] = useState<{ text: string; success: boolean } | null>(null);
 
   const fetchDocuments = async (userId: string) => {
     setLoading(true);
@@ -62,16 +68,63 @@ export default function TrustVaultDashboard() {
   };
 
   useEffect(() => {
-    fetchDocuments(activeUser.id);
-    fetchAuditLogs(activeUser.id);
-    setSelectedDoc(null);
-    setAttackResult(null);
+    let isMounted = true;
+
+    const loadInitialData = async () => {
+      if (typeof window !== 'undefined') {
+        await fetchDocuments(activeUser.id);
+        await fetchAuditLogs(activeUser.id);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeUser]);
+
+  const handleCreateDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateMsg(null);
+
+    const roleMap: Record<string, ('Admin' | 'Manager' | 'Viewer')[]> = {
+      Internal: ['Admin', 'Manager', 'Viewer'],
+      Confidential: ['Admin', 'Manager'],
+      Restricted: ['Admin'],
+    };
+
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: activeUser.id,
+          title: newTitle,
+          content: newContent,
+          classification: newClassification,
+          allowedRoles: roleMap[newClassification],
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateMsg({ text: data.error || 'Failed to create document', success: false });
+      } else {
+        setCreateMsg({ text: `Document "${data.document.title}" created successfully!`, success: true });
+        setNewTitle('');
+        setNewContent('');
+        fetchDocuments(activeUser.id);
+        fetchAuditLogs(activeUser.id);
+      }
+    } catch {
+      setCreateMsg({ text: 'Network error executing request.', success: false });
+    }
+  };
 
   const handleSimulateIdorAttack = async () => {
     setAttackResult(null);
     try {
-      // Intentionally request Acme confidential report while authenticated as current user
       const targetDocId = 'doc_acme_q3_report';
       const res = await fetch(`/api/documents/${targetDocId}?userId=${activeUser.id}`);
       const data = await res.json();
@@ -148,7 +201,7 @@ export default function TrustVaultDashboard() {
             </div>
           </div>
 
-          {/* Interactive IDOR Testing Card */}
+          {/* Exploit Simulation Tool */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">
               Exploit Simulation Tool
@@ -172,6 +225,63 @@ export default function TrustVaultDashboard() {
                 }`}
               >
                 {attackResult.message}
+              </div>
+            )}
+          </div>
+
+          {/* Document Creation Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Create Vault Document
+            </h2>
+            <p className="text-xs text-slate-400 mb-3">
+              Enforces write RBAC. Viewers are blocked server-side from creating documents.
+            </p>
+
+            <form onSubmit={handleCreateDocument} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Document Title"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                required
+                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+              />
+              <textarea
+                placeholder="Confidential Content"
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                required
+                rows={2}
+                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+              />
+              <select
+                value={newClassification}
+                onChange={(e) => setNewClassification(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
+                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="Internal">Internal (Admin, Manager, Viewer)</option>
+                <option value="Confidential">Confidential (Admin, Manager)</option>
+                <option value="Restricted">Restricted (Admin Only)</option>
+              </select>
+
+              <button
+                type="submit"
+                className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded shadow transition"
+              >
+                Publish to Organization
+              </button>
+            </form>
+
+            {createMsg && (
+              <div
+                className={`mt-3 p-2.5 rounded border text-xs font-mono ${
+                  createMsg.success
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                    : 'border-red-500/30 bg-red-500/10 text-red-300'
+                }`}
+              >
+                {createMsg.text}
               </div>
             )}
           </div>
