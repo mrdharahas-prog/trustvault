@@ -58,12 +58,39 @@ const ACCOUNTS: UserProfile[] = [
 ];
 
 export default function TrustVaultApp() {
+  
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'documents' | 'audit' | 'security'>('documents');
   const [selectedDoc, setSelectedDoc] = useState<DocumentRecord | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('tv_theme');
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('tv_theme', next);
+  };
+
+  const isDark = theme === 'dark';
+
+  // GitHub Primer Color Tokens
+  const bgMain = isDark ? 'bg-[#0d1117] text-[#c9d1d9]' : 'bg-[#ffffff] text-[#24292f]';
+  const bgCard = isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-[#f6f8fa] border-[#d0d7de]';
+  const bgInput = isDark ? 'bg-[#0d1117] border-[#30363d] text-[#c9d1d9] focus:border-[#58a6ff]' : 'bg-[#ffffff] border-[#d0d7de] text-[#24292f] focus:border-[#0969da]';
+  const textMuted = isDark ? 'text-[#8b949e]' : 'text-[#57606a]';
+  const textHead = isDark ? 'text-[#f0f6fc]' : 'text-[#1f2328]';
+  const navActive = isDark ? 'bg-[#21262d] text-[#f0f6fc]' : 'bg-[#eaeef2] text-[#1f2328]';
+  const btnPrimary = isDark
+    ? 'bg-[#238636] hover:bg-[#2ea043] text-white border border-[rgba(240,246,252,0.1)]'
+    : 'bg-[#1f883d] hover:bg-[#1a7f37] text-white border border-[rgba(31,35,40,0.15)]';
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -187,18 +214,31 @@ export default function TrustVaultApp() {
     }
   };
 
-  if (!currentUser) {
+if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col justify-center items-center px-4 py-12">
+      <div className={`min-h-screen ${bgMain} flex flex-col justify-center items-center px-4 py-12 transition-colors`}>
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={toggleTheme}
+            className={`px-3 py-1.5 rounded-md border text-xs font-medium flex items-center gap-2 ${
+              isDark ? 'border-[#30363d] bg-[#161b22] text-[#c9d1d9] hover:bg-[#21262d]' : 'border-[#d0d7de] bg-[#f6f8fa] text-[#24292f] hover:bg-[#eaeef2]'
+            }`}
+          >
+            {isDark ? '☀️ Light' : '🌙 Dark'}
+          </button>
+        </div>
+
         <div className="w-full max-w-xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-medium tracking-wide mb-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Identity & Access Governance
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-medium mb-3 ${
+              isDark ? 'bg-[#161b22] border-[#30363d] text-[#58a6ff]' : 'bg-[#f6f8fa] border-[#d0d7de] text-[#0969da]'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-[#3fb950]"></span>
+              Zero-Trust Identity Portal
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">TrustVault</h1>
-            <p className="text-sm text-slate-400 mt-2">
-              Select an identity profile to enter the vault with its associated tenancy and cryptographic privileges.
+            <h1 className={`text-2xl font-bold tracking-tight ${textHead}`}>TrustVault Identity Access</h1>
+            <p className={`text-xs ${textMuted} mt-1.5`}>
+              Select an identity to verify tenancy boundaries and role-based permissions.
             </p>
           </div>
 
@@ -207,38 +247,38 @@ export default function TrustVaultApp() {
               <button
                 key={account.id}
                 onClick={() => setCurrentUser(account)}
-                className="w-full text-left p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 transition-all group flex items-start gap-4"
+                className={`w-full text-left p-4 rounded-lg border transition-all flex items-start gap-3.5 ${bgCard} hover:border-[#58a6ff]/60`}
               >
-                <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700/80 flex items-center justify-center font-semibold text-xs text-slate-200 shrink-0 group-hover:border-slate-600 transition">
+                <div className={`w-9 h-9 rounded-md border flex items-center justify-center font-bold text-xs shrink-0 ${
+                  isDark ? 'bg-[#21262d] border-[#30363d] text-[#f0f6fc]' : 'bg-[#eaeef2] border-[#d0d7de] text-[#1f2328]'
+                }`}>
                   {account.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm text-slate-200 group-hover:text-white transition">
-                      {account.name}
-                    </span>
+                    <span className={`font-semibold text-xs ${textHead}`}>{account.name}</span>
                     <span
-                      className={`text-[11px] font-mono px-2 py-0.5 rounded border uppercase tracking-wider ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase font-medium ${
                         account.role === 'Admin'
-                          ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                          ? isDark ? 'bg-[#f85149]/10 text-[#ff7b72] border-[#f85149]/30' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/40'
                           : account.role === 'Manager'
-                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                          : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
+                          ? isDark ? 'bg-[#d29922]/10 text-[#e3b341] border-[#d29922]/30' : 'bg-[#fff8c5] text-[#9a6700] border-[#d4a72c]/40'
+                          : isDark ? 'bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30' : 'bg-[#ddf4ff] text-[#0969da] border-[#54aeff]/40'
                       }`}
                     >
                       {account.role}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{account.email} • {account.org}</div>
-                  <p className="text-xs text-slate-400 mt-2">{account.roleDescription}</p>
+                  <div className={`text-[11px] ${textMuted} mt-0.5`}>{account.email} • {account.org}</div>
+                  <p className={`text-[11px] ${textMuted} mt-1.5 leading-snug`}>{account.roleDescription}</p>
                 </div>
               </button>
             ))}
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-            <span className="text-xs text-slate-400">
-              Evaluator Environment • Multi-Tenant RBAC & IDOR Verification Suite
+          <div className={`mt-8 pt-6 border-t ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'} text-center`}>
+            <span className={`text-[11px] font-mono ${textMuted}`}>
+              TrustVault Security Gateway • Enterprise Multi-Tenant Defense
             </span>
           </div>
         </div>
@@ -247,36 +287,34 @@ export default function TrustVaultApp() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800 bg-[#0f141e]/70 backdrop-blur sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div className={`min-h-screen ${bgMain} flex flex-col transition-colors`}>
+      <header className={`border-b ${isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-[#f6f8fa] border-[#d0d7de]'} sticky top-0 z-20`}>
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center font-bold text-xs text-white">
+            <div className="flex items-center gap-2">
+              <span className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs text-white ${
+                isDark ? 'bg-[#238636]' : 'bg-[#1f883d]'
+              }`}>
                 TV
-              </div>
-              <span className="font-semibold text-sm tracking-tight text-white">TrustVault</span>
+              </span>
+              <span className={`font-semibold text-sm tracking-tight ${textHead}`}>TrustVault</span>
             </div>
 
             <nav className="flex items-center gap-1">
               <button
                 onClick={() => setActiveTab('documents')}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                  activeTab === 'documents'
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === 'documents' ? navActive : `${textMuted} hover:${textHead}`
                 }`}
               >
-                Vault Documents
+                Documents
               </button>
 
               {currentUser.role === 'Admin' && (
                 <button
                   onClick={() => setActiveTab('audit')}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                    activeTab === 'audit'
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-400 hover:text-slate-200'
+                    activeTab === 'audit' ? navActive : `${textMuted} hover:${textHead}`
                   }`}
                 >
                   Audit Ledger
@@ -286,35 +324,49 @@ export default function TrustVaultApp() {
               <button
                 onClick={() => setActiveTab('security')}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                  activeTab === 'security'
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
+                  activeTab === 'security' ? navActive : `${textMuted} hover:${textHead}`
                 }`}
               >
-                Security Sandbox (IDOR Probe)
+                Security Sandbox (IDOR)
               </button>
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-medium text-slate-200">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              title="Toggle Theme"
+              className={`p-1.5 rounded-md border text-xs transition ${
+                isDark ? 'border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]' : 'border-[#d0d7de] bg-[#ffffff] text-[#24292f] hover:bg-[#eaeef2]'
+              }`}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+
+            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-[#30363d]/50">
+              <div className={`w-7 h-7 rounded-md border flex items-center justify-center text-xs font-semibold ${
+                isDark ? 'bg-[#21262d] border-[#30363d] text-[#c9d1d9]' : 'bg-[#ffffff] border-[#d0d7de] text-[#24292f]'
+              }`}>
                 {currentUser.avatar}
               </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-xs font-medium text-slate-200 flex items-center gap-2">
+              <div className="text-left">
+                <div className={`text-xs font-medium leading-none ${textHead} flex items-center gap-1.5`}>
                   {currentUser.name}
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-mono uppercase bg-slate-800 border border-slate-700 text-slate-300">
+                  <span className={`text-[9px] font-mono px-1 rounded uppercase border ${
+                    isDark ? 'border-[#30363d] text-[#8b949e]' : 'border-[#d0d7de] text-[#57606a]'
+                  }`}>
                     {currentUser.role}
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-400">{currentUser.org}</div>
+                <div className={`text-[10px] ${textMuted} mt-0.5`}>{currentUser.org}</div>
               </div>
             </div>
 
             <button
               onClick={() => setCurrentUser(null)}
-              className="text-xs text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-md transition"
+              className={`text-xs border px-2.5 py-1 rounded-md transition font-medium ${
+                isDark ? 'border-[#30363d] text-[#c9d1d9] hover:bg-[#21262d]' : 'border-[#d0d7de] text-[#24292f] hover:bg-[#eaeef2]'
+              }`}
             >
               Switch User
             </button>
@@ -473,8 +525,7 @@ export default function TrustVaultApp() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium transition"
-                    >
+className={`w-full py-2 px-3 rounded-md text-xs font-semibold transition ${btnPrimary}`}                    >
                       {isSubmitting ? 'Encrypting & Committing...' : 'Commit to Vault'}
                     </button>
                   </form>
@@ -586,8 +637,9 @@ export default function TrustVaultApp() {
               <button
                 onClick={handleRunSecurityProbe}
                 disabled={isProbing}
-                className="w-full py-2.5 px-4 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-semibold tracking-wide transition shadow"
-              >
+className={`w-full py-2 px-3 rounded-md text-xs font-semibold text-white transition ${
+    isDark ? 'bg-[#da3633] hover:bg-[#b62324]' : 'bg-[#cf222e] hover:bg-[#a40e26]'
+  }`}              >
                 {isProbing ? 'Executing Exploit Probe...' : 'Execute Direct Object Reference Probe'}
               </button>
 
