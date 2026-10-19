@@ -65,14 +65,12 @@ export default function TrustVaultApp() {
   const [selectedDoc, setSelectedDoc] = useState<DocumentRecord | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Document creation form state
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [classification, setClassification] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal');
   const [formFeedback, setFormFeedback] = useState<{ message: string; ok: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // IDOR probe state
   const [probeResult, setProbeResult] = useState<{ status: number; text: string } | null>(null);
   const [isProbing, setIsProbing] = useState(false);
 
@@ -92,7 +90,6 @@ export default function TrustVaultApp() {
       setLoading(false);
     }
   };
-
   const loadAuditLogs = async (userId: string) => {
     try {
       const res = await fetch(`/api/audit?userId=${userId}`);
@@ -190,7 +187,6 @@ export default function TrustVaultApp() {
     }
   };
 
-  // 1. Sign-In Screen
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col justify-center items-center px-4 py-12">
@@ -250,10 +246,8 @@ export default function TrustVaultApp() {
     );
   }
 
-  // 2. Authenticated Portal
   return (
     <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col">
-      {/* Top Navigation */}
       <header className="border-b border-slate-800 bg-[#0f141e]/70 backdrop-blur sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -302,7 +296,6 @@ export default function TrustVaultApp() {
             </nav>
           </div>
 
-          {/* Active Identity Pill & Sign Out */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-medium text-slate-200">
@@ -311,7 +304,7 @@ export default function TrustVaultApp() {
               <div className="hidden sm:block text-left">
                 <div className="text-xs font-medium text-slate-200 flex items-center gap-2">
                   {currentUser.name}
-                  <span className="text-[10px] px-1.5 py-0.2 rounded font-mono uppercase bg-slate-800 border border-slate-700 text-slate-300">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-mono uppercase bg-slate-800 border border-slate-700 text-slate-300">
                     {currentUser.role}
                   </span>
                 </div>
@@ -329,9 +322,7 @@ export default function TrustVaultApp() {
         </div>
       </header>
 
-      {/* Main Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        {/* VIEW 1: VAULT DOCUMENTS */}
         {activeTab === 'documents' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
@@ -405,7 +396,6 @@ export default function TrustVaultApp() {
               )}
             </div>
 
-            {/* Right Pane: Role Capabilities & Document Creation */}
             <div className="space-y-6">
               <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
@@ -432,4 +422,195 @@ export default function TrustVaultApp() {
               </div>
 
               {currentUser.role !== 'Viewer' ? (
-                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/4
+                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Create Vault Record
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-4">
+                    Authorized document publication to {currentUser.org}.
+                  </p>
+
+                  <form onSubmit={handleCreateDocument} className="space-y-3.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Title</label>
+                      <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="e.g., Annual Security Assessment"
+                        required
+                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Confidential Payload</label>
+                      <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Encrypted content..."
+                        rows={3}
+                        required
+                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Clearance Level</label>
+                      <select
+                        value={classification}
+                        onChange={(e) => setClassification(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
+                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                      >
+                        <option value="Internal">Internal (All Staff)</option>
+                        <option value="Confidential">Confidential (Admin & Managers)</option>
+                        {currentUser.role === 'Admin' && (
+                          <option value="Restricted">Restricted (Admin Only)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium transition"
+                    >
+                      {isSubmitting ? 'Encrypting & Committing...' : 'Commit to Vault'}
+                    </button>
+                  </form>
+
+                  {formFeedback && (
+                    <div
+                      className={`mt-4 p-3 rounded-lg border text-xs font-mono leading-relaxed ${
+                        formFeedback.ok
+                          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                          : 'border-rose-500/20 bg-rose-500/10 text-rose-300'
+                      }`}
+                    >
+                      {formFeedback.message}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-5 rounded-xl border border-slate-800/60 bg-slate-900/20 text-center">
+                  <span className="text-xs text-slate-400">
+                    Viewer accounts hold read clearance only. Document publication is restricted to Managers and Administrators.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'audit' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h2 className="text-base font-semibold text-white">Immutable Security Ledger</h2>
+                <p className="text-xs text-slate-400">
+                  Forensic audit trail tracking authorization successes, permission rejections, and access boundaries for {currentUser.org}.
+                </p>
+              </div>
+              <button
+                onClick={() => loadAuditLogs(currentUser.id)}
+                className="text-xs px-3 py-1.5 rounded-md border border-slate-800 hover:border-slate-700 text-slate-300 transition"
+              >
+                Refresh Log
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-[#0e131d] overflow-hidden">
+              <div className="divide-y divide-slate-800/80">
+                {auditLogs.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">No events recorded in this audit cycle.</div>
+                ) : (
+                  auditLogs.map((log) => (
+                    <div key={log.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`font-mono px-2 py-0.5 rounded text-[10px] uppercase font-semibold border ${
+                            log.status === 'SUCCESS'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}
+                        >
+                          {log.action} • {log.status}
+                        </span>
+                        <span className="font-mono text-slate-300">{log.userEmail}</span>
+                      </div>
+
+                      <div className="text-slate-400 text-xs md:max-w-md truncate">
+                        {log.details || 'Routine authorization check passed.'}
+                      </div>
+
+                      <div className="font-mono text-[11px] text-slate-400 shrink-0">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'security' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="pb-3 border-b border-slate-800 text-center">
+              <h2 className="text-base font-semibold text-white">IDOR Penetration Test Sandbox</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Evaluate server-side tenant boundary enforcement by initiating direct resource access requests across organizations.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Target Resource:</span>
+                  <code className="text-slate-200">doc_acme_q3_report</code>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Target Tenant:</span>
+                  <span className="text-slate-200">Acme Corporation (org_acme)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Current Caller Tenant:</span>
+                  <span className="text-slate-200">{currentUser.org} ({currentUser.orgId})</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-400">Caller Identity:</span>
+                  <span className="text-slate-200">{currentUser.email}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleRunSecurityProbe}
+                disabled={isProbing}
+                className="w-full py-2.5 px-4 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-semibold tracking-wide transition shadow"
+              >
+                {isProbing ? 'Executing Exploit Probe...' : 'Execute Direct Object Reference Probe'}
+              </button>
+
+              {probeResult && (
+                <div
+                  className={`mt-4 p-4 rounded-lg border text-xs font-mono leading-relaxed ${
+                    probeResult.status === 200
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                      : 'border-rose-500/20 bg-rose-500/10 text-rose-300'
+                  }`}
+                >
+                  {probeResult.text}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-900/20 text-xs text-slate-400 leading-relaxed">
+              <strong className="text-slate-300 block mb-1">Expected Evaluator Behavior:</strong>
+              When authenticated as <strong>Eve Sterling (Rival Dynamics)</strong>, this request must be intercepted with a <strong>403 Forbidden</strong> response, confirming that tenancy validation occurs before data is queried from memory.
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
