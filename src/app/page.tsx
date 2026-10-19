@@ -1,59 +1,99 @@
 'use client';
 
-
 import React, { useState, useEffect } from 'react';
 import { DocumentRecord, AuditLogEntry } from '@/types/vault';
 
-interface SeedUserSummary {
+interface UserProfile {
   id: string;
   name: string;
-  role: string;
+  email: string;
+  role: 'Admin' | 'Manager' | 'Viewer';
   org: string;
-  desc: string;
+  orgId: string;
+  avatar: string;
+  roleDescription: string;
 }
 
-const PRESET_USERS: SeedUserSummary[] = [
-  { id: 'usr_admin_org1', name: 'Alice Admin', role: 'Admin', org: 'Acme Corp', desc: 'Full access to all Acme documents and audit trails' },
-  { id: 'usr_mgr_org1', name: 'Bob Manager', role: 'Manager', org: 'Acme Corp', desc: 'Read/write Acme docs, excluding root secret keys' },
-  { id: 'usr_view_org1', name: 'Charlie Viewer', role: 'Viewer', org: 'Acme Corp', desc: 'Read-only access to internal documents only' },
-  { id: 'usr_admin_org2', name: 'Eve Intruder', role: 'Admin', org: 'Rival Corp', desc: 'External tenant (Used to simulate IDOR cross-tenant exploit)' },
+const ACCOUNTS: UserProfile[] = [
+  {
+    id: 'usr_admin_org1',
+    name: 'Alice Henderson',
+    email: 'alice.h@acme.com',
+    role: 'Admin',
+    org: 'Acme Corporation',
+    orgId: 'org_acme',
+    avatar: 'AH',
+    roleDescription: 'Security Admin • Full audit & cryptographic key management',
+  },
+  {
+    id: 'usr_mgr_org1',
+    name: 'Robert Vance',
+    email: 'r.vance@acme.com',
+    role: 'Manager',
+    org: 'Acme Corporation',
+    orgId: 'org_acme',
+    avatar: 'RV',
+    roleDescription: 'Operations Lead • Document authoring & classified record access',
+  },
+  {
+    id: 'usr_view_org1',
+    name: 'Charlie Miller',
+    email: 'cmiller@acme.com',
+    role: 'Viewer',
+    org: 'Acme Corporation',
+    orgId: 'org_acme',
+    avatar: 'CM',
+    roleDescription: 'Internal Staff • Read-only access to unclassified policies',
+  },
+  {
+    id: 'usr_admin_org2',
+    name: 'Eve Sterling',
+    email: 'eve@rivalcorp.io',
+    role: 'Admin',
+    org: 'Rival Dynamics (External Tenant)',
+    orgId: 'org_rival',
+    avatar: 'ES',
+    roleDescription: 'External Organization Admin • Cross-tenant boundary test persona',
+  },
 ];
 
-export default function TrustVaultDashboard() {
-  const [activeUser, setActiveUser] = useState<SeedUserSummary>(PRESET_USERS[0]);
+export default function TrustVaultApp() {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<'documents' | 'audit' | 'security'>('documents');
   const [selectedDoc, setSelectedDoc] = useState<DocumentRecord | null>(null);
-  const [attackResult, setAttackResult] = useState<{ status: number; message: string } | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
-  const [newClassification, setNewClassification] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal');
-  const [createMsg, setCreateMsg] = useState<{ text: string; success: boolean } | null>(null);
+  // Document creation form state
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [classification, setClassification] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal');
+  const [formFeedback, setFormFeedback] = useState<{ message: string; ok: boolean } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchDocuments = async (userId: string) => {
+  // IDOR probe state
+  const [probeResult, setProbeResult] = useState<{ status: number; text: string } | null>(null);
+  const [isProbing, setIsProbing] = useState(false);
+
+  const loadDocuments = async (userId: string) => {
     setLoading(true);
-    setErrorMsg('');
     try {
       const res = await fetch(`/api/documents?userId=${userId}`);
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch documents');
+      if (res.ok) {
+        setDocuments(data.documents || []);
+      } else {
+        setDocuments([]);
       }
-      setDocuments(data.documents || []);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message);
-      }
+    } catch {
       setDocuments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAuditLogs = async (userId: string) => {
+  const loadAuditLogs = async (userId: string) => {
     try {
       const res = await fetch(`/api/audit?userId=${userId}`);
       const data = await res.json();
@@ -68,25 +108,24 @@ export default function TrustVaultDashboard() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadInitialData = async () => {
-      if (typeof window !== 'undefined') {
-        await fetchDocuments(activeUser.id);
-        await fetchAuditLogs(activeUser.id);
+    if (currentUser) {
+      loadDocuments(currentUser.id);
+      if (currentUser.role === 'Admin') {
+        loadAuditLogs(currentUser.id);
       }
-    };
-
-    loadInitialData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeUser]);
+      setSelectedDoc(null);
+      setProbeResult(null);
+      setFormFeedback(null);
+      setActiveTab('documents');
+    }
+  }, [currentUser]);
 
   const handleCreateDocument = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreateMsg(null);
+    if (!currentUser) return;
+
+    setIsSubmitting(true);
+    setFormFeedback(null);
 
     const roleMap: Record<string, ('Admin' | 'Manager' | 'Viewer')[]> = {
       Internal: ['Admin', 'Manager', 'Viewer'],
@@ -99,312 +138,298 @@ export default function TrustVaultDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: activeUser.id,
-          title: newTitle,
-          content: newContent,
-          classification: newClassification,
-          allowedRoles: roleMap[newClassification],
+          userId: currentUser.id,
+          title,
+          content,
+          classification,
+          allowedRoles: roleMap[classification],
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setCreateMsg({ text: data.error || 'Failed to create document', success: false });
+        setFormFeedback({ message: data.error || 'Authorization rejected by security boundary.', ok: false });
       } else {
-        setCreateMsg({ text: `Document "${data.document.title}" created successfully!`, success: true });
-        setNewTitle('');
-        setNewContent('');
-        fetchDocuments(activeUser.id);
-        fetchAuditLogs(activeUser.id);
+        setFormFeedback({ message: `Document "${data.document.title}" encrypted and committed to ledger.`, ok: true });
+        setTitle('');
+        setContent('');
+        loadDocuments(currentUser.id);
+        if (currentUser.role === 'Admin') loadAuditLogs(currentUser.id);
       }
     } catch {
-      setCreateMsg({ text: 'Network error executing request.', success: false });
+      setFormFeedback({ message: 'Transport error dispatching payload.', ok: false });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleSimulateIdorAttack = async () => {
-    setAttackResult(null);
+  const handleRunSecurityProbe = async () => {
+    if (!currentUser) return;
+    setIsProbing(true);
+    setProbeResult(null);
+
     try {
-      const targetDocId = 'doc_acme_q3_report';
-      const res = await fetch(`/api/documents/${targetDocId}?userId=${activeUser.id}`);
+      const targetDocumentId = 'doc_acme_q3_report';
+      const res = await fetch(`/api/documents/${targetDocumentId}?userId=${currentUser.id}`);
       const data = await res.json();
-      setAttackResult({
+
+      setProbeResult({
         status: res.status,
-        message: res.ok
-          ? `SUCCESS (200 OK): Retrieved "${data.document.title}". Content: ${data.document.content}`
-          : `BLOCKED (${res.status}): ${data.error}`,
+        text: res.ok
+          ? `200 OK — Decryption Successful: "${data.document.title}" (${data.document.content})`
+          : `${res.status} FORBIDDEN — Server Boundary Intercept: ${data.error}`,
       });
-      fetchAuditLogs(activeUser.id);
+
+      if (currentUser.role === 'Admin') {
+        loadAuditLogs(currentUser.id);
+      }
     } catch {
-      setAttackResult({
-        status: 500,
-        message: 'Request failed to execute.',
-      });
+      setProbeResult({ status: 500, text: 'Probe execution failed at network tier.' });
+    } finally {
+      setIsProbing(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 md:p-10">
-      <header className="max-w-7xl mx-auto pb-8 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold tracking-tight text-white">TrustVault</span>
-            <span className="text-xs font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded">
-              Zero-Trust RBAC Active
-            </span>
-          </div>
-          <p className="text-sm text-slate-400 mt-1">
-            Enterprise document access control, IDOR boundary defense, and tamper-evident audit logging.
-          </p>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Role Selector & Testing Controls */}
-        <section className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">
-              Select Evaluation Persona
-            </h2>
-            <div className="space-y-3">
-              {PRESET_USERS.map((user) => {
-                const isSelected = user.id === activeUser.id;
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() => setActiveUser(user)}
-                    className={`w-full text-left p-3.5 rounded-lg border transition-all text-xs ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-500/10 text-white ring-1 ring-indigo-500'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-medium text-slate-200">{user.name}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
-                          user.role === 'Admin'
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                            : user.role === 'Manager'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">{user.org}</div>
-                    <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">{user.desc}</p>
-                  </button>
-                );
-              })}
+  // 1. Sign-In Screen
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col justify-center items-center px-4 py-12">
+        <div className="w-full max-w-xl">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-medium tracking-wide mb-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Identity & Access Governance
             </div>
-          </div>
-
-          {/* Exploit Simulation Tool */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Exploit Simulation Tool
-            </h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Trigger a direct request against Acme Corp confidential asset (<code className="text-indigo-400">doc_acme_q3_report</code>) using the active persona.
+            <h1 className="text-3xl font-semibold tracking-tight text-white">TrustVault</h1>
+            <p className="text-sm text-slate-400 mt-2">
+              Select an identity profile to enter the vault with its associated tenancy and cryptographic privileges.
             </p>
-            <button
-              onClick={handleSimulateIdorAttack}
-              className="w-full py-2.5 px-4 bg-red-600/90 hover:bg-red-600 text-white text-xs font-semibold rounded-lg shadow transition"
-            >
-              Simulate Direct Object Request (IDOR Probe)
-            </button>
-
-            {attackResult && (
-              <div
-                className={`mt-4 p-3 rounded border text-xs font-mono leading-relaxed ${
-                  attackResult.status === 200
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                    : 'border-red-500/30 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {attackResult.message}
-              </div>
-            )}
           </div>
-
-          {/* Document Creation Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Create Vault Document
-            </h2>
-            <p className="text-xs text-slate-400 mb-3">
-              Enforces write RBAC. Viewers are blocked server-side from creating documents.
-            </p>
-
-            <form onSubmit={handleCreateDocument} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Document Title"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                required
-                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-              <textarea
-                placeholder="Confidential Content"
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                required
-                rows={2}
-                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-              <select
-                value={newClassification}
-                onChange={(e) => setNewClassification(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
-                className="w-full text-xs bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="Internal">Internal (Admin, Manager, Viewer)</option>
-                <option value="Confidential">Confidential (Admin, Manager)</option>
-                <option value="Restricted">Restricted (Admin Only)</option>
-              </select>
-
-              <button
-                type="submit"
-                className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded shadow transition"
-              >
-                Publish to Organization
-              </button>
-            </form>
-
-            {createMsg && (
-              <div
-                className={`mt-3 p-2.5 rounded border text-xs font-mono ${
-                  createMsg.success
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                    : 'border-red-500/30 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {createMsg.text}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Center Column: Authorized Document Feed */}
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Permitted Documents ({documents.length})
-            </h2>
-            {loading && <span className="text-xs text-slate-400 animate-pulse">Querying...</span>}
-          </div>
-
-          {errorMsg && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded mb-4">
-              {errorMsg}
-            </div>
-          )}
 
           <div className="space-y-3">
-            {documents.length === 0 && !loading && (
-              <div className="text-xs text-slate-400 italic py-6 text-center border border-dashed border-slate-800 rounded">
-                No accessible documents found under this tenant or permission level.
-              </div>
-            )}
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                onClick={() => setSelectedDoc(doc)}
-                className={`p-3.5 rounded-lg border transition-all cursor-pointer ${
-                  selectedDoc?.id === doc.id
-                    ? 'border-indigo-500 bg-slate-800/80'
-                    : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
-                }`}
+            {ACCOUNTS.map((account) => (
+              <button
+                key={account.id}
+                onClick={() => setCurrentUser(account)}
+                className="w-full text-left p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 transition-all group flex items-start gap-4"
               >
-                <div className="flex justify-between items-start mb-1.5">
-                  <h3 className="text-xs font-semibold text-white">{doc.title}</h3>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded font-mono ${
-                      doc.classification === 'Restricted'
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                        : doc.classification === 'Confidential'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-slate-700/50 text-slate-300 border border-slate-600/50'
-                    }`}
-                  >
-                    {doc.classification}
-                  </span>
+                <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700/80 flex items-center justify-center font-semibold text-xs text-slate-200 shrink-0 group-hover:border-slate-600 transition">
+                  {account.avatar}
                 </div>
-                <div className="text-[11px] text-slate-400 line-clamp-1">{doc.content}</div>
-                <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                  <span>ID: {doc.id}</span>
-                  <span>Roles: {doc.allowedRoles.join(', ')}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm text-slate-200 group-hover:text-white transition">
+                      {account.name}
+                    </span>
+                    <span
+                      className={`text-[11px] font-mono px-2 py-0.5 rounded border uppercase tracking-wider ${
+                        account.role === 'Admin'
+                          ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                          : account.role === 'Manager'
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                          : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
+                      }`}
+                    >
+                      {account.role}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">{account.email} • {account.org}</div>
+                  <p className="text-xs text-slate-400 mt-2">{account.roleDescription}</p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
-          {selectedDoc && (
-            <div className="mt-6 p-4 rounded-lg bg-slate-950 border border-slate-800">
-              <h4 className="text-xs font-semibold uppercase text-indigo-400 mb-2">
-                Decrypted Document Payload
-              </h4>
-              <p className="text-xs text-slate-200 leading-relaxed font-sans">{selectedDoc.content}</p>
-              <div className="mt-3 text-[10px] font-mono text-slate-400">
-                Created: {new Date(selectedDoc.createdAt).toLocaleTimeString()} | Owner: {selectedDoc.ownerId}
-              </div>
-            </div>
-          )}
-        </section>
+          <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
+            <span className="text-xs text-slate-400">
+              Evaluator Environment • Multi-Tenant RBAC & IDOR Verification Suite
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Right Column: Immutable Audit Ledger */}
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Audit Trail (Forensic Log)
-            </h2>
-            <button
-              onClick={() => fetchAuditLogs(activeUser.id)}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300"
-            >
-              Refresh
-            </button>
+  // 2. Authenticated Portal
+  return (
+    <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col">
+      {/* Top Navigation */}
+      <header className="border-b border-slate-800 bg-[#0f141e]/70 backdrop-blur sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center font-bold text-xs text-white">
+                TV
+              </div>
+              <span className="font-semibold text-sm tracking-tight text-white">TrustVault</span>
+            </div>
+
+            <nav className="flex items-center gap-1">
+              <button
+                onClick={() => setActiveTab('documents')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  activeTab === 'documents'
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Vault Documents
+              </button>
+
+              {currentUser.role === 'Admin' && (
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                    activeTab === 'audit'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Audit Ledger
+                </button>
+              )}
+
+              <button
+                onClick={() => setActiveTab('security')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  activeTab === 'security'
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Security Sandbox (IDOR Probe)
+              </button>
+            </nav>
           </div>
 
-          {activeUser.role !== 'Admin' ? (
-            <div className="text-xs text-slate-400 italic py-8 text-center border border-dashed border-slate-800 rounded p-4">
-              Audit log inspection is restricted. Only Organization Administrators have read access to the tamper-proof ledger.
+          {/* Active Identity Pill & Sign Out */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-medium text-slate-200">
+                {currentUser.avatar}
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-xs font-medium text-slate-200 flex items-center gap-2">
+                  {currentUser.name}
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-mono uppercase bg-slate-800 border border-slate-700 text-slate-300">
+                    {currentUser.role}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400">{currentUser.org}</div>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2.5 max-h-[550px] overflow-y-auto pr-1">
-              {auditLogs.length === 0 ? (
-                <div className="text-xs text-slate-400 italic text-center py-4">No audit events logged yet.</div>
-              ) : (
-                auditLogs.map((log) => (
+
+            <button
+              onClick={() => setCurrentUser(null)}
+              className="text-xs text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-md transition"
+            >
+              Switch User
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+        {/* VIEW 1: VAULT DOCUMENTS */}
+        {activeTab === 'documents' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div>
+                  <h2 className="text-base font-semibold text-white">Accessible Assets</h2>
+                  <p className="text-xs text-slate-400">
+                    Authorized files filtered by your organization boundary (<code className="text-slate-300">{currentUser.orgId}</code>) and role clearance.
+                  </p>
+                </div>
+                {loading && <span className="text-xs text-slate-400">Syncing...</span>}
+              </div>
+
+              {documents.length === 0 && !loading && (
+                <div className="p-12 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/20 text-slate-400 text-xs">
+                  No records matching your clearance classification.
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {documents.map((doc) => (
                   <div
-                    key={log.id}
-                    className="p-2.5 rounded bg-slate-950 border border-slate-800/80 text-[11px] font-mono"
+                    key={doc.id}
+                    onClick={() => setSelectedDoc(doc)}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                      selectedDoc?.id === doc.id
+                        ? 'border-indigo-500/80 bg-slate-900/90 shadow-sm'
+                        : 'border-slate-800/80 bg-slate-900/40 hover:border-slate-700'
+                    }`}
                   >
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <span className="font-medium text-sm text-slate-100">{doc.title}</span>
                       <span
-                        className={`font-semibold ${
-                          log.status === 'SUCCESS' ? 'text-emerald-400' : 'text-red-400'
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase shrink-0 ${
+                          doc.classification === 'Restricted'
+                            ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                            : doc.classification === 'Confidential'
+                            ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                         }`}
                       >
-                        [{log.action}] {log.status}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(log.timestamp).toLocaleTimeString()}
+                        {doc.classification}
                       </span>
                     </div>
-                    <div className="text-slate-400 truncate">Actor: {log.userEmail}</div>
-                    {log.details && (
-                      <div className="text-slate-400 text-[10px] mt-1 leading-snug">{log.details}</div>
-                    )}
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{doc.content}</p>
+                    <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <span>ID: {doc.id}</span>
+                      <span>Authorized: {doc.allowedRoles.join(', ')}</span>
+                    </div>
                   </div>
-                ))
+                ))}
+              </div>
+
+              {selectedDoc && (
+                <div className="mt-6 p-5 rounded-xl border border-slate-800 bg-[#0e131d]">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                    <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                      Decrypted Asset Inspector
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">{selectedDoc.id}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-2">{selectedDoc.title}</h3>
+                  <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
+                    {selectedDoc.content}
+                  </div>
+                  <div className="mt-3 text-[11px] text-slate-400 flex items-center justify-between font-mono">
+                    <span>Classification: {selectedDoc.classification}</span>
+                    <span>Created: {new Date(selectedDoc.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
               )}
             </div>
-          )}
-        </section>
-      </main>
-    </div>
-  );
-}
+
+            {/* Right Pane: Role Capabilities & Document Creation */}
+            <div className="space-y-6">
+              <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                  Account Capabilities
+                </h3>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
+                    <span className="text-slate-400">Read Clearance</span>
+                    <span className="font-medium text-emerald-400">Granted</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
+                    <span className="text-slate-400">Create Records</span>
+                    <span className={`font-medium ${currentUser.role === 'Viewer' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      {currentUser.role === 'Viewer' ? 'Restricted' : 'Granted'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-slate-400">Audit Ledger Access</span>
+                    <span className={`font-medium ${currentUser.role === 'Admin' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {currentUser.role === 'Admin' ? 'Granted' : 'Restricted'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {currentUser.role !== 'Viewer' ? (
+                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/4
