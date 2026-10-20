@@ -82,18 +82,19 @@ export default function TrustVaultApp() {
   const isDark = theme === 'dark';
 
   // GitHub Primer Color Tokens
-  const bgMain = isDark ? 'bg-[#0d1117] text-[#c9d1d9]' : 'bg-[#ffffff] text-[#24292f]';
-  const bgCard = isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-[#f6f8fa] border-[#d0d7de]';
-  const bgInput = isDark ? 'bg-[#0d1117] border-[#30363d] text-[#c9d1d9] focus:border-[#58a6ff]' : 'bg-[#ffffff] border-[#d0d7de] text-[#24292f] focus:border-[#0969da]';
+  const bgMain = isDark ? 'bg-[#0d1117] text-[#c9d1d9]' : 'bg-[#f6f8fa] text-[#1f2328]';
+  const bgCard = isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-[#ffffff] border-[#d0d7de] shadow-sm';
+  const bgInput = isDark ? 'bg-[#0d1117] border-[#30363d] text-[#c9d1d9] focus:border-[#58a6ff]' : 'bg-[#ffffff] border-[#d0d7de] text-[#1f2328] focus:border-[#0969da]';
   const textMuted = isDark ? 'text-[#8b949e]' : 'text-[#57606a]';
   const textHead = isDark ? 'text-[#f0f6fc]' : 'text-[#1f2328]';
-  const navActive = isDark ? 'bg-[#21262d] text-[#f0f6fc]' : 'bg-[#eaeef2] text-[#1f2328]';
+  const navActive = isDark ? 'bg-[#21262d] text-[#f0f6fc]' : 'bg-[#ffffff] text-[#1f2328] shadow-sm border border-[#d0d7de]';
   const btnPrimary = isDark
     ? 'bg-[#238636] hover:bg-[#2ea043] text-white border border-[rgba(240,246,252,0.1)]'
     : 'bg-[#1f883d] hover:bg-[#1a7f37] text-white border border-[rgba(31,35,40,0.15)]';
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [selectedFile, setSelectedFile] = useState<{ name: string; type: string; base64: string } | null>(null);
   const [classification, setClassification] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal');
   const [formFeedback, setFormFeedback] = useState<{ message: string; ok: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,6 +145,26 @@ export default function TrustVaultApp() {
     }
   }, [currentUser]);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3.5 * 1024 * 1024) {
+      alert('File size exceeds the 3.5MB limit.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedFile({
+        name: file.name,
+        type: file.type,
+        base64: reader.result as string,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -158,7 +179,7 @@ export default function TrustVaultApp() {
     };
 
     try {
-      const res = await fetch('/api/documents', {
+const res = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,6 +188,9 @@ export default function TrustVaultApp() {
           content,
           classification,
           allowedRoles: roleMap[classification],
+          fileName: selectedFile?.name,
+          fileType: selectedFile?.type,
+          fileData: selectedFile?.base64,
         }),
       });
 
@@ -177,6 +201,7 @@ export default function TrustVaultApp() {
         setFormFeedback({ message: `Document "${data.document.title}" encrypted and committed to ledger.`, ok: true });
         setTitle('');
         setContent('');
+        setSelectedFile(null);
         loadDocuments(currentUser.id);
         if (currentUser.role === 'Admin') loadAuditLogs(currentUser.id);
       }
@@ -243,38 +268,47 @@ if (!currentUser) {
           </div>
 
           <div className="space-y-3">
-            {ACCOUNTS.map((account) => (
-              <button
-                key={account.id}
-                onClick={() => setCurrentUser(account)}
-                className={`w-full text-left p-4 rounded-lg border transition-all flex items-start gap-3.5 ${bgCard} hover:border-[#58a6ff]/60`}
-              >
-                <div className={`w-9 h-9 rounded-md border flex items-center justify-center font-bold text-xs shrink-0 ${
-                  isDark ? 'bg-[#21262d] border-[#30363d] text-[#f0f6fc]' : 'bg-[#eaeef2] border-[#d0d7de] text-[#1f2328]'
-                }`}>
-                  {account.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`font-semibold text-xs ${textHead}`}>{account.name}</span>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase font-medium ${
-                        account.role === 'Admin'
-                          ? isDark ? 'bg-[#f85149]/10 text-[#ff7b72] border-[#f85149]/30' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/40'
-                          : account.role === 'Manager'
-                          ? isDark ? 'bg-[#d29922]/10 text-[#e3b341] border-[#d29922]/30' : 'bg-[#fff8c5] text-[#9a6700] border-[#d4a72c]/40'
-                          : isDark ? 'bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30' : 'bg-[#ddf4ff] text-[#0969da] border-[#54aeff]/40'
-                      }`}
-                    >
-                      {account.role}
-                    </span>
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    onClick={() => setSelectedDoc(doc)}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${bgCard} ${
+                      selectedDoc?.id === doc.id
+                        ? (isDark ? 'border-[#58a6ff] ring-1 ring-[#58a6ff]' : 'border-[#0969da] ring-1 ring-[#0969da]')
+                        : (isDark ? 'hover:border-[#58a6ff]/60' : 'hover:border-[#0969da]/60')
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold text-sm ${textHead}`}>{doc.title}</span>
+                        {doc.fileName && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${
+                            isDark ? 'bg-[#21262d] border-[#30363d] text-[#58a6ff]' : 'bg-[#ddf4ff] border-[#54aeff]/40 text-[#0969da]'
+                          }`}>
+                            📎 {doc.fileName.split('.').pop()?.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase shrink-0 font-medium ${
+                          doc.classification === 'Restricted'
+                            ? isDark ? 'bg-[#a371f7]/10 text-[#d2a8ff] border-[#a371f7]/30' : 'bg-[#fbefff] text-[#8250df] border-[#d8b9ff]/40'
+                            : doc.classification === 'Confidential'
+                            ? isDark ? 'bg-[#d29922]/10 text-[#e3b341] border-[#d29922]/30' : 'bg-[#fff8c5] text-[#9a6700] border-[#d4a72c]/40'
+                            : isDark ? 'bg-[#3fb950]/10 text-[#56d364] border-[#3fb950]/30' : 'bg-[#dafbe1] text-[#1a7f37] border-[#82e599]/40'
+                        }`}
+                      >
+                        {doc.classification}
+                      </span>
+                    </div>
+                    <p className={`text-xs ${textMuted} line-clamp-2 leading-relaxed`}>{doc.content}</p>
+                    <div className={`mt-3 pt-2.5 border-t ${isDark ? 'border-[#30363d]/60' : 'border-[#d0d7de]/70'} flex items-center justify-between text-[11px] font-mono ${textMuted}`}>
+                      <span>ID: {doc.id}</span>
+                      <span>Clearance: {doc.allowedRoles.join(', ')}</span>
+                    </div>
                   </div>
-                  <div className={`text-[11px] ${textMuted} mt-0.5`}>{account.email} • {account.org}</div>
-                  <p className={`text-[11px] ${textMuted} mt-1.5 leading-snug`}>{account.roleDescription}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+                ))}
+              </div>
 
           <div className={`mt-8 pt-6 border-t ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'} text-center`}>
             <span className={`text-[11px] font-mono ${textMuted}`}>
@@ -429,17 +463,57 @@ if (!currentUser) {
               </div>
 
               {selectedDoc && (
-<div className={`mt-6 p-5 rounded-xl border ${bgCard}`}>                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
-                    <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <div className={`mt-6 p-5 rounded-xl border ${bgCard}`}>
+                  <div className={`flex items-center justify-between pb-3 mb-3 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${textMuted}`}>
                       Decrypted Asset Inspector
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">{selectedDoc.id}</span>
+                    <span className={`text-xs font-mono ${textMuted}`}>{selectedDoc.id}</span>
                   </div>
-                  <h3 className="text-sm font-semibold text-white mb-2">{selectedDoc.title}</h3>
-                  <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
+                  <h3 className={`text-sm font-semibold ${textHead} mb-2`}>{selectedDoc.title}</h3>
+                  <div className={`p-3.5 rounded-lg border text-xs leading-relaxed ${bgInput}`}>
                     {selectedDoc.content}
                   </div>
-                  <div className="mt-3 text-[11px] text-slate-400 flex items-center justify-between font-mono">
+
+                  {/* File Attachment Viewer / Opener */}
+                  {selectedDoc.fileData && (
+                    <div className={`mt-3.5 p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isDark ? 'bg-[#21262d]/50 border-[#30363d]' : 'bg-[#f6f8fa] border-[#d0d7de]'
+                    }`}>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-base">📄</span>
+                        <div className="truncate">
+                          <p className={`text-xs font-semibold ${textHead} truncate`}>{selectedDoc.fileName}</p>
+                          <p className={`text-[10px] font-mono ${textMuted}`}>{selectedDoc.fileType || 'Attachment'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {selectedDoc.fileType?.startsWith('image/') && (
+                          <a
+                            href={selectedDoc.fileData}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`px-2.5 py-1 text-xs rounded border font-medium ${
+                              isDark ? 'border-[#30363d] bg-[#161b22] text-[#58a6ff] hover:bg-[#30363d]' : 'border-[#d0d7de] bg-[#ffffff] text-[#0969da] hover:bg-[#eaeef2]'
+                            }`}
+                          >
+                            Preview Image
+                          </a>
+                        )}
+                        <a
+                          href={selectedDoc.fileData}
+                          download={selectedDoc.fileName || 'vault-asset'}
+                          className={`px-3 py-1 text-xs rounded font-medium text-white ${
+                            isDark ? 'bg-[#238636] hover:bg-[#2ea043]' : 'bg-[#1f883d] hover:bg-[#1a7f37]'
+                          }`}
+                        >
+                          Open / Download
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className={`mt-3 text-[11px] ${textMuted} flex items-center justify-between font-mono`}>
                     <span>Classification: {selectedDoc.classification}</span>
                     <span>Created: {new Date(selectedDoc.createdAt).toLocaleString()}</span>
                   </div>
@@ -516,6 +590,27 @@ className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}
                           <option value="Restricted">Restricted (Admin Only)</option>
                         )}
                       </select>
+                    </div>
+
+                    <div>
+                      <label className={`block text-[11px] font-medium ${textHead} mb-1`}>
+                        Attach Document Asset (PDF, JPEG, PNG)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,image/png,image/jpeg,image/webp,text/plain"
+                        onChange={handleFileUpload}
+                        className={`w-full text-xs px-2.5 py-1.5 rounded-lg border file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-medium ${
+                          isDark
+                            ? 'file:bg-[#21262d] file:text-[#c9d1d9] bg-[#0d1117] border-[#30363d] text-[#8b949e]'
+                            : 'file:bg-[#eaeef2] file:text-[#24292f] bg-[#ffffff] border-[#d0d7de] text-[#57606a]'
+                        }`}
+                      />
+                      {selectedFile && (
+                        <p className={`text-[10px] font-mono mt-1 ${isDark ? 'text-[#58a6ff]' : 'text-[#0969da]'}`}>
+                          ✓ Attached: {selectedFile.name} (ready to commit)
+                        </p>
+                      )}
                     </div>
 
                     <button

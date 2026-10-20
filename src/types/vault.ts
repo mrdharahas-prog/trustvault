@@ -19,6 +19,9 @@ export interface DocumentRecord {
   ownerId: string;
   allowedRoles: Role[];
   createdAt: string;
+  fileName?: string;
+  fileType?: string;
+  fileData?: string;
 }
 
 export interface AuditLogEntry {
