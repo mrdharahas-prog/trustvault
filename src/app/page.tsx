@@ -399,14 +399,14 @@ if (!currentUser) {
                   <div
                     key={doc.id}
                     onClick={() => setSelectedDoc(doc)}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${bgCard} ${
                       selectedDoc?.id === doc.id
-                        ? 'border-indigo-500/80 bg-slate-900/90 shadow-sm'
-                        : 'border-slate-800/80 bg-slate-900/40 hover:border-slate-700'
+                        ? (isDark ? 'border-[#58a6ff]' : 'border-[#0969da]')
+                        : (isDark ? 'hover:border-[#58a6ff]/50' : 'hover:border-[#0969da]/50')
                     }`}
                   >
                     <div className="flex items-start justify-between gap-4 mb-2">
-                      <span className="font-medium text-sm text-slate-100">{doc.title}</span>
+                      <span className={`font-medium text-sm ${textHead}`}>{doc.title}</span>
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase shrink-0 ${
                           doc.classification === 'Restricted'
@@ -429,8 +429,7 @@ if (!currentUser) {
               </div>
 
               {selectedDoc && (
-                <div className="mt-6 p-5 rounded-xl border border-slate-800 bg-[#0e131d]">
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+<div className={`mt-6 p-5 rounded-xl border ${bgCard}`}>                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                     <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                       Decrypted Asset Inspector
                     </span>
@@ -449,8 +448,8 @@ if (!currentUser) {
             </div>
 
             <div className="space-y-6">
-              <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+<div className={`p-5 rounded-xl border ${bgCard}`}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
                   Account Capabilities
                 </h3>
                 <div className="space-y-2 text-xs">
@@ -474,7 +473,7 @@ if (!currentUser) {
               </div>
 
               {currentUser.role !== 'Viewer' ? (
-                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
+                <div className={`p-5 rounded-xl border ${bgCard}`}>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                     Create Vault Record
                   </h3>
@@ -491,8 +490,7 @@ if (!currentUser) {
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g., Annual Security Assessment"
                         required
-                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                      />
+className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      />
                     </div>
 
                     <div>
@@ -503,8 +501,7 @@ if (!currentUser) {
                         placeholder="Encrypted content..."
                         rows={3}
                         required
-                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                      />
+className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      />
                     </div>
 
                     <div>
@@ -512,8 +509,7 @@ if (!currentUser) {
                       <select
                         value={classification}
                         onChange={(e) => setClassification(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
-                        className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                      >
+className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      >
                         <option value="Internal">Internal (All Staff)</option>
                         <option value="Confidential">Confidential (Admin & Managers)</option>
                         {currentUser.role === 'Admin' && (
@@ -570,32 +566,48 @@ className={`w-full py-2 px-3 rounded-md text-xs font-semibold transition ${btnPr
               </button>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-[#0e131d] overflow-hidden">
-              <div className="divide-y divide-slate-800/80">
+           <div className={`rounded-xl border overflow-hidden ${bgCard}`}>
+              <div className={`divide-y ${isDark ? 'divide-[#30363d]' : 'divide-[#d0d7de]'}`}>
                 {auditLogs.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400">No events recorded in this audit cycle.</div>
+                  <div className={`p-8 text-center text-xs ${textMuted}`}>No events recorded in this audit cycle.</div>
                 ) : (
                   auditLogs.map((log) => (
-                    <div key={log.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`font-mono px-2 py-0.5 rounded text-[10px] uppercase font-semibold border ${
-                            log.status === 'SUCCESS'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          }`}
-                        >
-                          {log.action} • {log.status}
+                    <div key={log.id} className="p-4 space-y-2 text-xs font-mono">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold border ${
+                              log.status === 'SUCCESS'
+                                ? isDark ? 'bg-[#3fb950]/10 text-[#56d364] border-[#3fb950]/30' : 'bg-[#dafbe1] text-[#1a7f37] border-[#82e599]/40'
+                                : isDark ? 'bg-[#f85149]/10 text-[#ff7b72] border-[#f85149]/30' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/40'
+                            }`}
+                          >
+                            {log.action} • {log.status}
+                          </span>
+                          <span className={`font-semibold ${textHead}`}>{log.userEmail}</span>
+                        </div>
+                        <span className={`text-[10px] ${textMuted}`}>
+                          {new Date(log.timestamp).toLocaleTimeString()}
                         </span>
-                        <span className="font-mono text-slate-300">{log.userEmail}</span>
                       </div>
 
-                      <div className="text-slate-400 text-xs md:max-w-md truncate">
+                      <div className={`${textMuted} text-[11px]`}>
                         {log.details || 'Routine authorization check passed.'}
                       </div>
 
-                      <div className="font-mono text-[11px] text-slate-400 shrink-0">
-                        {new Date(log.timestamp).toLocaleTimeString()}
+                      <div className={`p-2 rounded border text-[10px] space-y-1 ${
+                        isDark ? 'bg-[#0d1117] border-[#30363d]/60 text-[#8b949e]' : 'bg-[#ffffff] border-[#d0d7de] text-[#57606a]'
+                      }`}>
+                        <div className="flex items-center justify-between truncate">
+                          <span>SHA-256 Digest:</span>
+                          <span className={`font-semibold ${isDark ? 'text-[#58a6ff]' : 'text-[#0969da]'}`}>
+                            {log.hash ? log.hash.substring(0, 32) + '...' : 'UNHASHED'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between truncate opacity-75">
+                          <span>Previous Block:</span>
+                          <span>{log.previousHash ? log.previousHash.substring(0, 24) + '...' : 'GENESIS'}</span>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -614,8 +626,7 @@ className={`w-full py-2 px-3 rounded-md text-xs font-semibold transition ${btnPr
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
-              <div className="space-y-2 text-xs">
+<div className={`p-6 rounded-xl border space-y-4 ${bgCard}`}>              <div className="space-y-2 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Target Resource:</span>
                   <code className="text-slate-200">doc_acme_q3_report</code>

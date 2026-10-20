@@ -1,17 +1,11 @@
 export type Role = 'Admin' | 'Manager' | 'Viewer';
 
-export type Permission = 
-  | 'document:read'
-  | 'document:create'
-  | 'document:update'
-  | 'document:delete'
-  | 'document:share'
-  | 'audit:read';
+export type ClassificationLevel = 'Internal' | 'Confidential' | 'Restricted';
 
 export interface User {
   id: string;
-  email: string;
   name: string;
+  email: string;
   role: Role;
   organizationId: string;
 }
@@ -20,31 +14,23 @@ export interface DocumentRecord {
   id: string;
   title: string;
   content: string;
-  classification: 'Public' | 'Internal' | 'Confidential' | 'Restricted';
-  ownerId: string;
+  classification: ClassificationLevel;
   organizationId: string;
+  ownerId: string;
   allowedRoles: Role[];
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
+  action: 'READ' | 'CREATE' | 'ACCESS_DENIED' | 'PROBE';
+  status: 'SUCCESS' | 'DENIED';
   userId: string;
   userEmail: string;
   organizationId: string;
-  action: 'READ' | 'CREATE' | 'UPDATE' | 'DELETE' | 'ACCESS_DENIED' | 'LOGIN';
   resourceId?: string;
-  resourceType: 'DOCUMENT' | 'AUTH' | 'PERMISSION';
-  status: 'SUCCESS' | 'DENIED' | 'FAILURE';
-  ipAddress?: string;
   details?: string;
-}
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  role: Role;
-  organizationId: string;
+  previousHash: string;
+  hash: string;
 }
