@@ -1,120 +1,138 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getDocumentsForOrg, findUserById, recordAuditLog, DOCUMENTS } from '@/lib/store';
-import { ROLE_PERMISSIONS } from '@/lib/permissions';
-import { DocumentRecord, ClassificationLevel } from '@/types/vault';
+import crypto from 'crypto';
+import { User, DocumentRecord, AuditLogEntry } from '@/types/vault';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
+export const USERS: User[] = [
+  {
+    id: 'usr_admin_org1',
+    name: 'Alice Henderson',
+    email: 'alice.h@acme.com',
+    role: 'Admin',
+    organizationId: 'org_acme',
+  },
+  {
+    id: 'usr_mgr_org1',
+    name: 'Robert Vance',
+    email: 'r.vance@acme.com',
+    role: 'Manager',
+    organizationId: 'org_acme',
+  },
+  {
+    id: 'usr_view_org1',
+    name: 'Charlie Miller',
+    email: 'cmiller@acme.com',
+    role: 'Viewer',
+    organizationId: 'org_acme',
+  },
+  {
+    id: 'usr_admin_org2',
+    name: 'Eve Sterling',
+    email: 'eve@rivalcorp.io',
+    role: 'Admin',
+    organizationId: 'org_rival',
+  },
+];
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
-  }
+export const DOCUMENTS: DocumentRecord[] = [
+  {
+    id: 'doc_acme_q3_report',
+    title: 'Acme Q3 Financial Performance',
+    content: 'CONFIDENTIAL: Acme Corp quarterly gross profit exceeded target by 18%. Operating margin at 34%.',
+    classification: 'Confidential',
+    organizationId: 'org_acme',
+    ownerId: 'usr_mgr_org1',
+    allowedRoles: ['Admin', 'Manager'],
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'doc_acme_handbook',
+    title: 'Acme Employee Handbook',
+    content: 'Standard operating guidelines, leave policies, and office code of conduct.',
+    classification: 'Internal',
+    organizationId: 'org_acme',
+    ownerId: 'usr_admin_org1',
+    allowedRoles: ['Admin', 'Manager', 'Viewer'],
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    id: 'doc_acme_security_keys',
+    title: 'Master Root Key Manifest',
+    content: 'TOP SECRET: Production KMS ARN and root rotation schedule.',
+    classification: 'Restricted',
+    organizationId: 'org_acme',
+    ownerId: 'usr_admin_org1',
+    allowedRoles: ['Admin'],
+    createdAt: new Date(Date.now() - 10800000).toISOString(),
+  },
+];
 
-  const user = findUserById(userId);
-  if (!user) {
-    return NextResponse.json({ error: 'User identity not found' }, { status: 404 });
-  }
+export const AUDIT_LOGS: AuditLogEntry[] = [];
 
-  const orgDocs = getDocumentsForOrg(user.organizationId);
-
-  const permittedDocs = orgDocs.filter((doc) => {
-    return doc.allowedRoles.includes(user.role);
-  });
-
-  recordAuditLog({
-    action: 'READ',
-    status: 'SUCCESS',
-    userId: user.id,
-    userEmail: user.email,
-    organizationId: user.organizationId,
-    details: `Retrieved ${permittedDocs.length} vault document records.`,
-  });
-
-  return NextResponse.json({ documents: permittedDocs });
+function calculateEntryHash(
+  previousHash: string,
+  timestamp: string,
+  action: string,
+  status: string,
+  userId: string,
+  resourceId?: string
+): string {
+  const payload = `${previousHash}|${timestamp}|${action}|${status}|${userId}|${resourceId || ''}`;
+  return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { userId, title, content, classification, allowedRoles } = body;
+export function recordAuditLog(params: {
+  action: 'READ' | 'CREATE' | 'ACCESS_DENIED' | 'PROBE';
+  status: 'SUCCESS' | 'DENIED';
+  userId: string;
+  userEmail: string;
+  organizationId: string;
+  resourceId?: string;
+  resourceType?: string;
+  details?: string;
+}): AuditLogEntry {
+  const timestamp = new Date().toISOString();
+  const previousHash =
+    AUDIT_LOGS.length > 0 ? AUDIT_LOGS[AUDIT_LOGS.length - 1].hash : 'GENESIS_ROOT_HASH_00000000000000000000';
 
-    if (!userId || typeof userId !== 'string') {
-      return NextResponse.json({ error: 'Valid userId is required.' }, { status: 400 });
-    }
+  const hash = calculateEntryHash(
+    previousHash,
+    timestamp,
+    params.action,
+    params.status,
+    params.userId,
+    params.resourceId
+  );
 
-    const user = findUserById(userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User identity does not exist.' }, { status: 404 });
-    }
+  const entry: AuditLogEntry = {
+    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp,
+    action: params.action,
+    status: params.status,
+    userId: params.userId,
+    userEmail: params.userEmail,
+    organizationId: params.organizationId,
+    resourceId: params.resourceId,
+    resourceType: params.resourceType,
+    details: params.details,
+    previousHash,
+    hash,
+  };
 
-    const permissions = ROLE_PERMISSIONS[user.role];
-    if (!permissions.includes('document:create')) {
-      recordAuditLog({
-        action: 'ACCESS_DENIED',
-        status: 'DENIED',
-        userId: user.id,
-        userEmail: user.email,
-        organizationId: user.organizationId,
-        details: `Role ${user.role} attempted unauthorized document creation.`,
-      });
+  AUDIT_LOGS.push(entry);
+  return entry;
+}
 
-      return NextResponse.json(
-        { error: `Forbidden: Role ${user.role} does not possess document:create permissions.` },
-        { status: 403 }
-      );
-    }
+export function findUserById(id: string): User | undefined {
+  return USERS.find((u) => u.id === id);
+}
 
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return NextResponse.json({ error: 'Title is required and cannot be empty.' }, { status: 400 });
-    }
+export function getDocumentsForOrg(orgId: string): DocumentRecord[] {
+  return DOCUMENTS.filter((doc) => doc.organizationId === orgId);
+}
 
-    if (title.length > 120) {
-      return NextResponse.json({ error: 'Title exceeds maximum limit of 120 characters.' }, { status: 400 });
-    }
+export function findDocumentById(id: string): DocumentRecord | undefined {
+  return DOCUMENTS.find((doc) => doc.id === id);
+}
 
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Content payload is required.' }, { status: 400 });
-    }
-
-    if (content.length > 5000) {
-      return NextResponse.json({ error: 'Content payload exceeds maximum limit of 5000 characters.' }, { status: 400 });
-    }
-
-    const validClassifications: ClassificationLevel[] = ['Internal', 'Confidential', 'Restricted'];
-    if (!validClassifications.includes(classification)) {
-      return NextResponse.json({ error: 'Invalid classification level specified.' }, { status: 400 });
-    }
-
-    if (classification === 'Restricted' && user.role !== 'Admin') {
-      return NextResponse.json({ error: 'Only Administrators can publish Restricted assets.' }, { status: 403 });
-    }
-
-    const newDoc: DocumentRecord = {
-      id: `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      title: title.trim(),
-      content: content.trim(),
-      classification: classification as ClassificationLevel,
-      organizationId: user.organizationId,
-      ownerId: user.id,
-      allowedRoles: allowedRoles || ['Admin', 'Manager'],
-      createdAt: new Date().toISOString(),
-    };
-
-    DOCUMENTS.push(newDoc);
-
-    recordAuditLog({
-      action: 'CREATE',
-      status: 'SUCCESS',
-      userId: user.id,
-      userEmail: user.email,
-      organizationId: user.organizationId,
-      resourceId: newDoc.id,
-      details: `Published document "${newDoc.title}" with [${newDoc.classification}] clearance.`,
-    });
-
-    return NextResponse.json({ document: newDoc }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Malformed JSON payload.' }, { status: 400 });
-  }
+export function getAuditLogs(orgId: string): AuditLogEntry[] {
+  return AUDIT_LOGS.filter((log) => log.organizationId === orgId);
 }

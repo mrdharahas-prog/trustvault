@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentsForOrg, findUserById, recordAuditLog, DOCUMENTS } from '@/lib/store';
 import { ROLE_PERMISSIONS } from '@/lib/permissions';
-import { DocumentRecord } from '@/types/vault';
+import { ClassificationLevel, DocumentRecord } from '@/types/vault';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -131,12 +131,11 @@ export async function POST(request: NextRequest) {
       organizationId: user.organizationId,
       allowedRoles: allowedRoles || ['Admin', 'Manager'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
       fileName: fileName || undefined,
       fileType: fileType || undefined,
-      fileData: fileData || undefined,,
+      fileData: fileData || undefined,
+      updatedAt: ''
     };
-
     DOCUMENTS.push(newDoc);
 
 recordAuditLog({
