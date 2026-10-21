@@ -405,14 +405,36 @@ if (!currentUser) {
         {activeTab === 'documents' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div>
-                  <h2 className="text-base font-semibold text-white">Accessible Assets</h2>
-                  <p className="text-xs text-slate-400">
-                    Authorized files filtered by your organization boundary (<code className="text-slate-300">{currentUser.orgId}</code>) and role clearance.
-                  </p>
+              <div className={`p-5 rounded-xl border ${bgCard}`}>
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'} mb-3`}>
+                  Account Capabilities
+                </h3>
+                <div className="space-y-2 text-xs">
+                  <div className={`flex items-center justify-between py-1.5 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                    <span className={textMuted}>Read Clearance</span>
+                    <span className={`font-semibold ${isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]'}`}>Granted</span>
+                  </div>
+                  <div className={`flex items-center justify-between py-1.5 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                    <span className={textMuted}>Create Records</span>
+                    <span className={`font-semibold ${
+                      currentUser.role === 'Viewer'
+                        ? (isDark ? 'text-[#f85149]' : 'text-[#cf222e]')
+                        : (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]')
+                    }`}>
+                      {currentUser.role === 'Viewer' ? 'Restricted' : 'Granted'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className={textMuted}>Audit Ledger Access</span>
+                    <span className={`font-semibold ${
+                      currentUser.role === 'Admin'
+                        ? (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]')
+                        : (isDark ? 'text-[#f85149]' : 'text-[#cf222e]')
+                    }`}>
+                      {currentUser.role === 'Admin' ? 'Granted' : 'Restricted'}
+                    </span>
+                  </div>
                 </div>
-                {loading && <span className="text-xs text-slate-400">Syncing...</span>}
               </div>
 
               {documents.length === 0 && !loading && (
@@ -550,8 +572,7 @@ if (!currentUser) {
 
                   <form onSubmit={handleCreateDocument} className="space-y-3.5">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Title</label>
-                      <input
+<label className={`block text-[11px] font-semibold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>                      <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -638,129 +659,118 @@ className={`w-full py-2 px-3 rounded-md text-xs font-semibold transition ${btnPr
         )}
 
         {activeTab === 'audit' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div>
-                <h2 className="text-base font-semibold text-white">Immutable Security Ledger</h2>
-                <p className="text-xs text-slate-400">
-                  Forensic audit trail tracking authorization successes, permission rejections, and access boundaries for {currentUser.org}.
+            <div className="space-y-6">
+              <div className={`flex items-center justify-between pb-3 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                <div>
+                  <h2 className={`text-base font-bold ${textHead}`}>Immutable Security Ledger</h2>
+                  <p className={`text-xs ${textMuted} mt-0.5`}>
+                    Cryptographically chained audit trail (SHA-256) tracking tamper-evident vault actions.
+                  </p>
+                </div>
+                <button
+                  onClick={() => loadAuditLogs(currentUser.id)}
+                  className={`px-3 py-1.5 rounded-md border text-xs font-semibold transition ${
+                    isDark
+                      ? 'border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]'
+                      : 'border-[#d0d7de] bg-[#ffffff] text-[#1f2328] hover:bg-[#eaeef2] shadow-sm'
+                  }`}
+                >
+                  Refresh Logs
+                </button>
+              </div>
+
+              <div className={`rounded-xl border overflow-hidden ${bgCard}`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className={`border-b text-[11px] font-mono uppercase ${
+                        isDark ? 'bg-[#161b22] border-[#30363d] text-[#8b949e]' : 'bg-[#f6f8fa] border-[#d0d7de] text-[#57606a]'
+                      }`}>
+                        <th className="py-2.5 px-4">Timestamp</th>
+                        <th className="py-2.5 px-4">Action</th>
+                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4">Actor</th>
+                        <th className="py-2.5 px-4">Details</th>
+                        <th className="py-2.5 px-4">Block Hash</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y font-mono text-[11px] ${isDark ? 'divide-[#30363d]' : 'divide-[#d0d7de]'}`}>
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className={isDark ? 'hover:bg-[#21262d]/50' : 'hover:bg-[#f6f8fa]'}>
+                          <td className={`py-3 px-4 whitespace-nowrap ${textMuted}`}>
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </td>
+                          <td className="py-3 px-4 font-semibold">
+                            <span className={log.action === 'CREATE' ? 'text-indigo-400 font-bold' : log.action === 'ACCESS_DENIED' ? 'text-rose-500 font-bold' : 'text-emerald-500 font-bold'}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              log.status === 'SUCCESS'
+                                ? (isDark ? 'bg-[#3fb950]/15 text-[#56d364] border-[#3fb950]/40' : 'bg-[#dafbe1] text-[#1a7f37] border-[#82e599]/60')
+                                : (isDark ? 'bg-[#f85149]/15 text-[#ff7b72] border-[#f85149]/40' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/60')
+                            }`}>
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className={`py-3 px-4 ${textHead}`}>{log.userEmail}</td>
+                          <td className={`py-3 px-4 max-w-xs truncate ${textMuted}`}>{log.details || '-'}</td>
+                          <td className="py-3 px-4 text-[10px] text-[#0969da] dark:text-[#58a6ff] truncate max-w-[120px]">
+                            {log.hash ? `${log.hash.slice(0, 10)}...` : 'GENESIS'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+        {activeTab === 'security' && (
+            <div className="space-y-6 max-w-4xl">
+              <div className={`pb-3 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                <h2 className={`text-base font-bold ${textHead}`}>IDOR Penetration Test Sandbox</h2>
+                <p className={`text-xs ${textMuted} mt-1 leading-relaxed`}>
+                  Execute deliberate cross-tenant or role-elevation API probes against the backend enforcement filter to confirm strict RBAC and multi-tenant containment.
                 </p>
               </div>
-              <button
-                onClick={() => loadAuditLogs(currentUser.id)}
-                className="text-xs px-3 py-1.5 rounded-md border border-slate-800 hover:border-slate-700 text-slate-300 transition"
-              >
-                Refresh Log
-              </button>
-            </div>
 
-           <div className={`rounded-xl border overflow-hidden ${bgCard}`}>
-              <div className={`divide-y ${isDark ? 'divide-[#30363d]' : 'divide-[#d0d7de]'}`}>
-                {auditLogs.length === 0 ? (
-                  <div className={`p-8 text-center text-xs ${textMuted}`}>No events recorded in this audit cycle.</div>
-                ) : (
-                  auditLogs.map((log) => (
-                    <div key={log.id} className="p-4 space-y-2 text-xs font-mono">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold border ${
-                              log.status === 'SUCCESS'
-                                ? isDark ? 'bg-[#3fb950]/10 text-[#56d364] border-[#3fb950]/30' : 'bg-[#dafbe1] text-[#1a7f37] border-[#82e599]/40'
-                                : isDark ? 'bg-[#f85149]/10 text-[#ff7b72] border-[#f85149]/30' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/40'
-                            }`}
-                          >
-                            {log.action} • {log.status}
-                          </span>
-                          <span className={`font-semibold ${textHead}`}>{log.userEmail}</span>
-                        </div>
-                        <span className={`text-[10px] ${textMuted}`}>
-                          {new Date(log.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
+              <div className={`p-6 rounded-xl border ${bgCard} space-y-4`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className={`text-sm font-bold ${textHead}`}>Simulated Probe: doc_acme_q3_report</h3>
+                    <p className={`text-xs ${textMuted} mt-0.5`}>
+                      Target: Confidential asset belonging to <code className="font-mono font-semibold">org_acme</code>.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleRunSecurityProbe}
+                    disabled={isProbing}
+                    className={`px-4 py-2 rounded-md text-xs font-semibold text-white transition ${
+                      isProbing ? 'opacity-50 cursor-not-allowed' : ''
+                    } ${isDark ? 'bg-[#da3633] hover:bg-[#b62324]' : 'bg-[#cf222e] hover:bg-[#a40e26]'}`}
+                  >
+                    {isProbing ? 'Executing Probe...' : 'Fire Probe Request'}
+                  </button>
+                </div>
 
-                      <div className={`${textMuted} text-[11px]`}>
-                        {log.details || 'Routine authorization check passed.'}
-                      </div>
-
-                      <div className={`p-2 rounded border text-[10px] space-y-1 ${
-                        isDark ? 'bg-[#0d1117] border-[#30363d]/60 text-[#8b949e]' : 'bg-[#ffffff] border-[#d0d7de] text-[#57606a]'
-                      }`}>
-                        <div className="flex items-center justify-between truncate">
-                          <span>SHA-256 Digest:</span>
-                          <span className={`font-semibold ${isDark ? 'text-[#58a6ff]' : 'text-[#0969da]'}`}>
-                            {log.hash ? log.hash.substring(0, 32) + '...' : 'UNHASHED'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between truncate opacity-75">
-                          <span>Previous Block:</span>
-                          <span>{log.previousHash ? log.previousHash.substring(0, 24) + '...' : 'GENESIS'}</span>
-                        </div>
-                      </div>
+                {probeResult && (
+                  <div className={`mt-4 p-4 rounded-lg border font-mono text-xs ${
+                    probeResult.status === 200
+                      ? (isDark ? 'bg-[#238636]/10 border-[#238636]/40 text-[#56d364]' : 'bg-[#dafbe1] border-[#82e599] text-[#1a7f37]')
+                      : (isDark ? 'bg-[#da3633]/10 border-[#da3633]/40 text-[#ff7b72]' : 'bg-[#ffebe9] border-[#ff8182] text-[#cf222e]')
+                  }`}>
+                    <div className="font-bold mb-1">
+                      HTTP Status: {probeResult.status} {probeResult.status === 200 ? 'SUCCESS' : 'INTERCEPTED'}
                     </div>
-                  ))
+                    <div>{probeResult.text}</div>
+                  </div>
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'security' && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="pb-3 border-b border-slate-800 text-center">
-              <h2 className="text-base font-semibold text-white">IDOR Penetration Test Sandbox</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Evaluate server-side tenant boundary enforcement by initiating direct resource access requests across organizations.
-              </p>
-            </div>
-
-<div className={`p-6 rounded-xl border space-y-4 ${bgCard}`}>              <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-800/60">
-                  <span className="text-slate-400">Target Resource:</span>
-                  <code className="text-slate-200">doc_acme_q3_report</code>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-800/60">
-                  <span className="text-slate-400">Target Tenant:</span>
-                  <span className="text-slate-200">Acme Corporation (org_acme)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-800/60">
-                  <span className="text-slate-400">Current Caller Tenant:</span>
-                  <span className="text-slate-200">{currentUser.org} ({currentUser.orgId})</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Caller Identity:</span>
-                  <span className="text-slate-200">{currentUser.email}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleRunSecurityProbe}
-                disabled={isProbing}
-className={`w-full py-2 px-3 rounded-md text-xs font-semibold text-white transition ${
-    isDark ? 'bg-[#da3633] hover:bg-[#b62324]' : 'bg-[#cf222e] hover:bg-[#a40e26]'
-  }`}              >
-                {isProbing ? 'Executing Exploit Probe...' : 'Execute Direct Object Reference Probe'}
-              </button>
-
-              {probeResult && (
-                <div
-                  className={`mt-4 p-4 rounded-lg border text-xs font-mono leading-relaxed ${
-                    probeResult.status === 200
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-                      : 'border-rose-500/20 bg-rose-500/10 text-rose-300'
-                  }`}
-                >
-                  {probeResult.text}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-900/20 text-xs text-slate-400 leading-relaxed">
-              <strong className="text-slate-300 block mb-1">Expected Evaluator Behavior:</strong>
-              When authenticated as <strong>Eve Sterling (Rival Dynamics)</strong>, this request must be intercepted with a <strong>403 Forbidden</strong> response, confirming that tenancy validation occurs before data is queried from memory.
-            </div>
-          </div>
-        )}
+          )}
       </main>
     </div>
   );
