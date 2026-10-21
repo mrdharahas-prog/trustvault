@@ -538,42 +538,49 @@ if (!currentUser) {
 
             <div className="space-y-6">
 <div className={`p-5 rounded-xl border ${bgCard}`}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                  Account Capabilities
-                </h3>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
-                    <span className="text-slate-400">Read Clearance</span>
-                    <span className="font-medium text-emerald-400">Granted</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1 border-b border-slate-800/60">
-                    <span className="text-slate-400">Create Records</span>
-                    <span className={`font-medium ${currentUser.role === 'Viewer' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                      {currentUser.role === 'Viewer' ? 'Restricted' : 'Granted'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-slate-400">Audit Ledger Access</span>
-                    <span className={`font-medium ${currentUser.role === 'Admin' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {currentUser.role === 'Admin' ? 'Granted' : 'Restricted'}
-                    </span>
+                  <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'} mb-3`}>
+                    Account Capabilities
+                  </h3>
+                  <div className="space-y-2 text-xs">
+                    <div className={`flex items-center justify-between py-1 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                      <span className={`font-medium ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'}`}>Read Clearance</span>
+                      <span className={`font-semibold ${isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]'}`}>Granted</span>
+                    </div>
+                    <div className={`flex items-center justify-between py-1 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                      <span className={`font-medium ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'}`}>Create Records</span>
+                      <span className={`font-semibold ${
+                        currentUser.role === 'Viewer' 
+                          ? (isDark ? 'text-[#f85149]' : 'text-[#cf222e]') 
+                          : (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]')
+                      }`}>
+                        {currentUser.role === 'Viewer' ? 'Restricted' : 'Granted'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className={`font-medium ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'}`}>Audit Ledger Access</span>
+                      <span className={`font-semibold ${
+                        currentUser.role === 'Admin' 
+                          ? (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]') 
+                          : (isDark ? 'text-[#f85149]' : 'text-[#cf222e]')
+                      }`}>
+                        {currentUser.role === 'Admin' ? 'Granted' : 'Restricted'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {currentUser.role !== 'Viewer' ? (
-                <div className={`p-5 rounded-xl border ${bgCard}`}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Create Vault Record
-                  </h3>
-                  <p className="text-xs text-slate-400 mb-4">
-                    Authorized document publication to {currentUser.org}.
-                  </p>
+                {currentUser.role !== 'Viewer' ? (
+                  <div className={`p-5 rounded-xl border ${bgCard}`}>
+                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'} mb-1`}>
+                      Create Vault Record
+                    </h3>
+                    <p className={`text-xs ${isDark ? 'text-[#8b949e]' : 'text-[#57606a]'} mb-4`}>
+                      Authorized document publication to {currentUser.org}.
+                    </p>
 
                   <form onSubmit={handleCreateDocument} className="space-y-3.5">
                    <div>
-                    <label className={`block text-[11px] font-semibold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>
-                      Title
+<label className={`block text-[11px] font-bold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>Confidential Payload                      Title
                     </label>
                     <input
                       type="text"
@@ -597,8 +604,7 @@ className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Clearance Level</label>
-                      <select
+<label className={`block text-[11px] font-bold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>Clearance Level</label>                      <select
                         value={classification}
                         onChange={(e) => setClassification(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
 className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      >
