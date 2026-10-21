@@ -246,7 +246,7 @@ if (!currentUser) {
           <button
             onClick={toggleTheme}
             className={`px-3 py-1.5 rounded-md border text-xs font-medium flex items-center gap-2 ${
-              isDark ? 'border-[#30363d] bg-[#161b22] text-[#c9d1d9] hover:bg-[#21262d]' : 'border-[#d0d7de] bg-[#f6f8fa] text-[#24292f] hover:bg-[#eaeef2]'
+              isDark ? 'border-[#30363d] bg-[#161b22] text-[#c9d1d9] hover:bg-[#21262d]' : 'border-[#d0d7de] bg-[#ffffff] text-[#1f2328] hover:bg-[#eaeef2] shadow-sm'
             }`}
           >
             {isDark ? '☀️ Light' : '🌙 Dark'}
@@ -256,7 +256,7 @@ if (!currentUser) {
         <div className="w-full max-w-xl">
           <div className="text-center mb-8">
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-medium mb-3 ${
-              isDark ? 'bg-[#161b22] border-[#30363d] text-[#58a6ff]' : 'bg-[#f6f8fa] border-[#d0d7de] text-[#0969da]'
+              isDark ? 'bg-[#161b22] border-[#30363d] text-[#58a6ff]' : 'bg-[#ddf4ff] border-[#54aeff]/40 text-[#0969da]'
             }`}>
               <span className="w-2 h-2 rounded-full bg-[#3fb950]"></span>
               Zero-Trust Identity Portal
@@ -268,47 +268,40 @@ if (!currentUser) {
           </div>
 
           <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    onClick={() => setSelectedDoc(doc)}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${bgCard} ${
-                      selectedDoc?.id === doc.id
-                        ? (isDark ? 'border-[#58a6ff] ring-1 ring-[#58a6ff]' : 'border-[#0969da] ring-1 ring-[#0969da]')
-                        : (isDark ? 'hover:border-[#58a6ff]/60' : 'hover:border-[#0969da]/60')
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-semibold text-sm ${textHead}`}>{doc.title}</span>
-                        {doc.fileName && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${
-                            isDark ? 'bg-[#21262d] border-[#30363d] text-[#58a6ff]' : 'bg-[#ddf4ff] border-[#54aeff]/40 text-[#0969da]'
-                          }`}>
-                            📎 {doc.fileName.split('.').pop()?.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase shrink-0 font-medium ${
-                          doc.classification === 'Restricted'
-                            ? isDark ? 'bg-[#a371f7]/10 text-[#d2a8ff] border-[#a371f7]/30' : 'bg-[#fbefff] text-[#8250df] border-[#d8b9ff]/40'
-                            : doc.classification === 'Confidential'
-                            ? isDark ? 'bg-[#d29922]/10 text-[#e3b341] border-[#d29922]/30' : 'bg-[#fff8c5] text-[#9a6700] border-[#d4a72c]/40'
-                            : isDark ? 'bg-[#3fb950]/10 text-[#56d364] border-[#3fb950]/30' : 'bg-[#dafbe1] text-[#1a7f37] border-[#82e599]/40'
-                        }`}
-                      >
-                        {doc.classification}
-                      </span>
-                    </div>
-                    <p className={`text-xs ${textMuted} line-clamp-2 leading-relaxed`}>{doc.content}</p>
-                    <div className={`mt-3 pt-2.5 border-t ${isDark ? 'border-[#30363d]/60' : 'border-[#d0d7de]/70'} flex items-center justify-between text-[11px] font-mono ${textMuted}`}>
-                      <span>ID: {doc.id}</span>
-                      <span>Clearance: {doc.allowedRoles.join(', ')}</span>
-                    </div>
+            {ACCOUNTS.map((account) => (
+              <button
+                key={account.id}
+                onClick={() => setCurrentUser(account)}
+                className={`w-full text-left p-4 rounded-lg border transition-all flex items-start gap-3.5 ${bgCard} ${
+                  isDark ? 'hover:border-[#58a6ff]/60' : 'hover:border-[#0969da]/60'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-md border flex items-center justify-center font-bold text-xs shrink-0 ${
+                  isDark ? 'bg-[#21262d] border-[#30363d] text-[#f0f6fc]' : 'bg-[#eaeef2] border-[#d0d7de] text-[#1f2328]'
+                }`}>
+                  {account.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`font-semibold text-xs ${textHead}`}>{account.name}</span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase font-medium ${
+                        account.role === 'Admin'
+                          ? isDark ? 'bg-[#f85149]/10 text-[#ff7b72] border-[#f85149]/30' : 'bg-[#ffebe9] text-[#cf222e] border-[#ff8182]/40'
+                          : account.role === 'Manager'
+                          ? isDark ? 'bg-[#d29922]/10 text-[#e3b341] border-[#d29922]/30' : 'bg-[#fff8c5] text-[#9a6700] border-[#d4a72c]/40'
+                          : isDark ? 'bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30' : 'bg-[#ddf4ff] text-[#0969da] border-[#54aeff]/40'
+                      }`}
+                    >
+                      {account.role}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <div className={`text-[11px] ${textMuted} mt-0.5`}>{account.email} • {account.org}</div>
+                  <p className={`text-[11px] ${textMuted} mt-1.5 leading-snug`}>{account.roleDescription}</p>
+                </div>
+              </button>
+            ))}
+          </div>
 
           <div className={`mt-8 pt-6 border-t ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'} text-center`}>
             <span className={`text-[11px] font-mono ${textMuted}`}>
