@@ -571,15 +571,19 @@ if (!currentUser) {
                   </p>
 
                   <form onSubmit={handleCreateDocument} className="space-y-3.5">
-                    <div>
-<label className={`block text-[11px] font-semibold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>                      <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g., Annual Security Assessment"
-                        required
-className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      />
-                    </div>
+                   <div>
+                    <label className={`block text-[11px] font-semibold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g., Annual Security Assessment"
+                      required
+                      className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}
+                    />
+                  </div>
 
                     <div>
                       <label className="block text-[11px] font-medium text-slate-300 mb-1">Confidential Payload</label>
