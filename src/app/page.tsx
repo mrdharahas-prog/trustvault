@@ -405,37 +405,15 @@ if (!currentUser) {
         {activeTab === 'documents' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              <div className={`p-5 rounded-xl border ${bgCard}`}>
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-[#8b949e]' : 'text-[#24292f]'} mb-3`}>
-                  Account Capabilities
-                </h3>
-                <div className="space-y-2 text-xs">
-                  <div className={`flex items-center justify-between py-1.5 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
-                    <span className={textMuted}>Read Clearance</span>
-                    <span className={`font-semibold ${isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]'}`}>Granted</span>
+             <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
+                  <div>
+                    <h2 className={`text-base font-bold ${textHead}`}>Accessible Assets</h2>
+                    <p className={`text-xs ${textMuted} mt-0.5`}>
+                      Authorized files filtered by your organization boundary (<code className={`font-mono font-semibold ${isDark ? 'text-[#58a6ff]' : 'text-[#0969da]'}`}>{currentUser.orgId}</code>) and role clearance.
+                    </p>
                   </div>
-                  <div className={`flex items-center justify-between py-1.5 border-b ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}>
-                    <span className={textMuted}>Create Records</span>
-                    <span className={`font-semibold ${
-                      currentUser.role === 'Viewer'
-                        ? (isDark ? 'text-[#f85149]' : 'text-[#cf222e]')
-                        : (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]')
-                    }`}>
-                      {currentUser.role === 'Viewer' ? 'Restricted' : 'Granted'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className={textMuted}>Audit Ledger Access</span>
-                    <span className={`font-semibold ${
-                      currentUser.role === 'Admin'
-                        ? (isDark ? 'text-[#3fb950]' : 'text-[#1a7f37]')
-                        : (isDark ? 'text-[#f85149]' : 'text-[#cf222e]')
-                    }`}>
-                      {currentUser.role === 'Admin' ? 'Granted' : 'Restricted'}
-                    </span>
-                  </div>
+                  {loading && <span className={`text-xs ${textMuted}`}>Syncing...</span>}
                 </div>
-              </div>
 
               {documents.length === 0 && !loading && (
                 <div className="p-12 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/20 text-slate-400 text-xs">
@@ -580,7 +558,8 @@ if (!currentUser) {
 
                   <form onSubmit={handleCreateDocument} className="space-y-3.5">
                    <div>
-<label className={`block text-[11px] font-bold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>Confidential Payload                      Title
+                    <label className={`block text-[11px] font-semibold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>
+                      Title
                     </label>
                     <input
                       type="text"
@@ -592,16 +571,19 @@ if (!currentUser) {
                     />
                   </div>
 
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">Confidential Payload</label>
-                      <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Encrypted content..."
-                        rows={3}
-                        required
-className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}                      />
-                    </div>
+                  <div>
+                    <label className={`block text-[11px] font-bold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>
+                      Confidential Payload
+                    </label>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Encrypted content..."
+                      rows={3}
+                      required
+                      className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${bgInput}`}
+                    />
+                  </div>
 
                     <div>
 <label className={`block text-[11px] font-bold ${isDark ? 'text-[#c9d1d9]' : 'text-[#24292f]'} mb-1`}>Clearance Level</label>                      <select
